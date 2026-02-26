@@ -70,7 +70,7 @@ export default function PedestrianDeathsChart() {
   }, []);
 
   const margin = { top: 40, right: 30, bottom: 70, left: 70 };
-  const width = Math.max(700, viewport.width - 64);
+  const width = Math.min(900, Math.max(320, viewport.width - 64));
   const height = Math.max(520, Math.min(820, viewport.height - 260));
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
@@ -129,7 +129,7 @@ export default function PedestrianDeathsChart() {
       padding: "24px",
       display: "flex",
       flexDirection: "column",
-      alignItems: "stretch",
+      alignItems: "center",
     }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
 
@@ -212,7 +212,15 @@ export default function PedestrianDeathsChart() {
       )}
 
       {/* SVG Chart */}
-      <div style={{ position: "relative", background: "#161b22", borderRadius: 12, border: "1px solid #21262d", padding: 8, width: "100%" }}>
+      <div style={{
+        position: "relative",
+        background: "#161b22",
+        borderRadius: 12,
+        border: "1px solid #21262d",
+        padding: 8,
+        width: "100%",
+        maxWidth: 900,
+      }}>
         <svg width={width} height={height} style={{ display: "block", overflow: "visible", width: "100%", height: "auto" }}>
           <defs>
             <clipPath id="chartClip">
