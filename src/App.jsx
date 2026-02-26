@@ -1,139 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 
-// Data: [country, iso, region, pedestrian_deaths_per_100k, cars_per_1000_people, population_millions]
+// Data rows are loaded from public/data.json.
+// Format: [country, iso, region, pedestrian_deaths_per_100k, cars_per_1000_people, population_millions]
 // Sources: WHO Global Status Report on Road Safety 2023 (pedestrian deaths, 2021 data)
 //          World Bank / OICA motor vehicle registrations ~2021
-// Pedestrian deaths = estimated pedestrian road traffic deaths per 100,000 population
-// Cars per 1000 = passenger cars per 1000 inhabitants
-
-const RAW_DATA = [
-  // High-income / Europe
-  ["Norway",        "NOR", "Europe",         0.2,  495, 5.4],
-  ["Sweden",        "SWE", "Europe",         0.5,  488, 10.4],
-  ["Denmark",       "DNK", "Europe",         0.4,  471, 5.9],
-  ["Finland",       "FIN", "Europe",         0.5,  548, 5.5],
-  ["Switzerland",   "CHE", "Europe",         0.5,  561, 8.7],
-  ["Netherlands",   "NLD", "Europe",         0.5,  461, 17.5],
-  ["Germany",       "DEU", "Europe",         0.6,  589, 83.2],
-  ["Austria",       "AUT", "Europe",         0.6,  576, 9.1],
-  ["UK",            "GBR", "Europe",         0.4,  444, 67.5],
-  ["Ireland",       "IRL", "Europe",         0.5,  410, 5.1],
-  ["France",        "FRA", "Europe",         0.7,  508, 67.5],
-  ["Belgium",       "BEL", "Europe",         0.6,  511, 11.5],
-  ["Spain",         "ESP", "Europe",         0.6,  530, 47.4],
-  ["Portugal",      "PRT", "Europe",         0.9,  461, 10.2],
-  ["Italy",         "ITA", "Europe",         0.8,  681, 60.4],
-  ["Iceland",       "ISL", "Europe",         0.3,  751, 0.37],
-  ["Luxembourg",    "LUX", "Europe",         0.4,  681, 0.65],
-  ["Japan",         "JPN", "E. Asia/Pac.",   0.6,  619, 125.7],
-  ["South Korea",   "KOR", "E. Asia/Pac.",   1.2,  448, 51.7],
-  ["Australia",     "AUS", "E. Asia/Pac.",   0.8,  745, 25.7],
-  ["New Zealand",   "NZL", "E. Asia/Pac.",   0.9,  718, 5.1],
-  ["Canada",        "CAN", "N. America",     0.9,  653, 38.0],
-  ["USA",           "USA", "N. America",     2.0,  816, 332.0],
-  ["Israel",        "ISR", "Middle East",    0.9,  367, 9.3],
-  ["Singapore",     "SGP", "E. Asia/Pac.",   0.3,  112, 5.9],
-  ["Hong Kong",     "HKG", "E. Asia/Pac.",   0.2,   77, 7.5],
-  ["Czech Republic","CZE", "Europe",         1.2,  580, 10.7],
-  ["Slovakia",      "SVK", "Europe",         0.9,  438, 5.5],
-  ["Hungary",       "HUN", "Europe",         1.1,  400, 9.7],
-  ["Poland",        "POL", "Europe",         1.6,  598, 38.0],
-  ["Slovenia",      "SVN", "Europe",         0.9,  565, 2.1],
-  ["Estonia",       "EST", "Europe",         1.1,  513, 1.3],
-  ["Latvia",        "LVA", "Europe",         1.8,  404, 1.9],
-  ["Lithuania",     "LTU", "Europe",         1.9,  486, 2.8],
-  ["Croatia",       "HRV", "Europe",         1.0,  457, 4.0],
-  ["Romania",       "ROU", "Europe",         2.3,  338, 19.2],
-  ["Bulgaria",      "BGR", "Europe",         1.8,  398, 6.8],
-  ["Serbia",        "SRB", "Europe",         1.5,  280, 6.9],
-  ["Greece",        "GRC", "Europe",         1.1,  573, 10.7],
-  ["Cyprus",        "CYP", "Europe",         0.7,  619, 1.2],
-  ["Malta",         "MLT", "Europe",         0.4,  694, 0.52],
-  // Upper-middle income
-  ["Russia",        "RUS", "Europe",         2.8,  365, 143.4],
-  ["Belarus",       "BLR", "Europe",         1.5,  333, 9.4],
-  ["Ukraine",       "UKR", "Europe",         1.8,  206, 43.5],
-  ["China",         "CHN", "E. Asia/Pac.",   1.8,  199, 1412.0],
-  ["Brazil",        "BRA", "Lat. America",   3.6,  219, 214.3],
-  ["Mexico",        "MEX", "Lat. America",   1.7,  235, 130.3],
-  ["Argentina",     "ARG", "Lat. America",   2.8,  233, 45.6],
-  ["Colombia",      "COL", "Lat. America",   3.0,  108, 51.3],
-  ["Peru",          "PER", "Lat. America",   3.5,   90, 32.5],
-  ["Ecuador",       "ECU", "Lat. America",   4.0,   98, 17.8],
-  ["Venezuela",     "VEN", "Lat. America",   2.4,  134, 28.5],
-  ["Cuba",          "CUB", "Lat. America",   4.2,   46, 11.3],
-  ["Dominican Rep.","DOM", "Lat. America",   5.0,   90, 10.9],
-  ["South Africa",  "ZAF", "Sub-Saharan",    8.5,  165, 60.0],
-  ["Botswana",      "BWA", "Sub-Saharan",    7.2,  152, 2.6],
-  ["Namibia",       "NAM", "Sub-Saharan",    6.0,  120, 2.6],
-  ["Gabon",         "GAB", "Sub-Saharan",    5.0,  180, 2.3],
-  ["Turkey",        "TUR", "Middle East",    1.8,  250, 85.0],
-  ["Iran",          "IRN", "Middle East",    4.5,  168, 85.0],
-  ["Jordan",        "JOR", "Middle East",    3.0,  143, 10.3],
-  ["Lebanon",       "LBN", "Middle East",    4.5,  420, 6.8],
-  ["Tunisia",       "TUN", "N. Africa",      3.5,  110, 11.9],
-  ["Morocco",       "MAR", "N. Africa",      3.8,   84, 37.1],
-  ["Algeria",       "DZA", "N. Africa",      3.0,   90, 44.6],
-  ["Libya",         "LBY", "N. Africa",      5.5,  220, 7.0],
-  ["Egypt",         "EGY", "N. Africa",      5.0,   46, 104.0],
-  ["Thailand",      "THA", "E. Asia/Pac.",   3.9,  194, 71.6],
-  ["Malaysia",      "MYS", "E. Asia/Pac.",   2.5,  406, 33.0],
-  ["Indonesia",     "IDN", "E. Asia/Pac.",   3.0,   87, 274.0],
-  ["Vietnam",       "VNM", "E. Asia/Pac.",   3.3,   32, 98.0],
-  ["Philippines",   "PHL", "E. Asia/Pac.",   3.2,   37, 111.0],
-  ["Sri Lanka",     "LKA", "S. Asia",        3.5,   60, 22.2],
-  ["Kazakhstan",    "KAZ", "C. Asia",        3.8,  296, 19.0],
-  ["Azerbaijan",    "AZE", "C. Asia",        2.8,  155, 10.1],
-  ["Armenia",       "ARM", "C. Asia",        2.2,  245, 3.0],
-  ["Georgia",       "GEO", "C. Asia",        3.0,  251, 3.7],
-  // Lower-middle income
-  ["India",         "IND", "S. Asia",        3.5,   22, 1393.0],
-  ["Pakistan",      "PAK", "S. Asia",        2.0,   22, 225.2],
-  ["Bangladesh",    "BGD", "S. Asia",        3.0,    6, 166.3],
-  ["Nepal",         "NPL", "S. Asia",        2.5,   15, 29.6],
-  ["Myanmar",       "MMR", "E. Asia/Pac.",   4.0,   25, 54.4],
-  ["Cambodia",      "KHM", "E. Asia/Pac.",   5.0,   28, 16.7],
-  ["Ghana",         "GHA", "Sub-Saharan",    6.0,   35, 32.4],
-  ["Nigeria",       "NGA", "Sub-Saharan",    9.0,   33, 213.4],
-  ["Senegal",       "SEN", "Sub-Saharan",    5.5,   30, 17.2],
-  ["Cameroon",      "CMR", "Sub-Saharan",    6.5,   21, 27.9],
-  ["Côte d'Ivoire", "CIV", "Sub-Saharan",    6.2,   30, 26.9],
-  ["Kenya",         "KEN", "Sub-Saharan",    7.5,   25, 54.0],
-  ["Tanzania",      "TZA", "Sub-Saharan",    6.0,   18, 62.0],
-  ["Uganda",        "UGA", "Sub-Saharan",    7.8,   10, 46.9],
-  ["Ethiopia",      "ETH", "Sub-Saharan",    7.0,    9, 120.0],
-  ["Sudan",         "SDN", "Sub-Saharan",    5.5,   34, 44.9],
-  ["Mozambique",    "MOZ", "Sub-Saharan",    6.5,   14, 32.8],
-  ["Zambia",        "ZMB", "Sub-Saharan",    7.2,   18, 18.9],
-  ["Zimbabwe",      "ZWE", "Sub-Saharan",    8.0,   24, 15.1],
-  ["Madagascar",    "MDG", "Sub-Saharan",    5.5,   11, 27.7],
-  ["Bolivia",       "BOL", "Lat. America",   4.5,   82, 11.8],
-  ["Honduras",      "HND", "Lat. America",   6.0,   70, 10.3],
-  ["Guatemala",     "GTM", "Lat. America",   5.5,   75, 17.1],
-  ["Nicaragua",     "NIC", "Lat. America",   4.8,   60, 6.6],
-  ["El Salvador",   "SLV", "Lat. America",   4.5,   82, 6.5],
-  ["Haiti",         "HTI", "Lat. America",   8.0,   24, 11.4],
-  ["Iraq",          "IRQ", "Middle East",    5.0,  108, 41.2],
-  ["Yemen",         "YEM", "Middle East",    4.5,   43, 33.7],
-  ["Syria",         "SYR", "Middle East",    3.5,   66, 21.3],
-  // Low income
-  ["Guinea",        "GIN", "Sub-Saharan",   16.0,   14, 13.2],
-  ["Central Af. R.","CAF", "Sub-Saharan",   13.0,    8, 4.9],
-  ["Chad",          "TCD", "Sub-Saharan",   11.0,   10, 16.9],
-  ["Niger",         "NER", "Sub-Saharan",   10.0,    6, 25.1],
-  ["Mali",          "MLI", "Sub-Saharan",   10.5,   12, 22.4],
-  ["Burkina Faso",  "BFA", "Sub-Saharan",    9.5,   14, 21.5],
-  ["Congo DR",      "COD", "Sub-Saharan",    9.0,    8, 95.9],
-  ["Somalia",       "SOM", "Sub-Saharan",    8.5,   12, 16.4],
-  ["Sierra Leone",  "SLE", "Sub-Saharan",   10.0,   16, 8.1],
-  ["Liberia",       "LBR", "Sub-Saharan",    9.5,   14, 5.2],
-  ["Togo",          "TGO", "Sub-Saharan",    8.5,   22, 8.3],
-  ["Benin",         "BEN", "Sub-Saharan",    8.0,   19, 12.1],
-  ["Malawi",        "MWI", "Sub-Saharan",    7.5,    9, 20.0],
-  ["Rwanda",        "RWA", "Sub-Saharan",    7.0,    8, 13.5],
-  ["Burundi",       "BDI", "Sub-Saharan",    6.8,    5, 12.0],
-  ["Afghanistan",   "AFG", "S. Asia",        5.5,   18, 39.8],
-];
+const DATA_URL = import.meta.env.BASE_URL + "data.json";
 
 const REGION_COLORS = {
   "Europe":        "#4E91E0",
@@ -150,6 +21,8 @@ const REGION_COLORS = {
 const REGIONS = Object.keys(REGION_COLORS);
 
 export default function PedestrianDeathsChart() {
+  const [data, setData] = useState([]);
+  const [dataError, setDataError] = useState(null);
   const [hoveredPoint, setHoveredPoint] = useState(null);
   const [selectedRegions, setSelectedRegions] = useState(new Set(REGIONS));
   const [tooltip, setTooltip] = useState(null);
@@ -168,6 +41,34 @@ export default function PedestrianDeathsChart() {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadData() {
+      try {
+        setDataError(null);
+        const res = await fetch(DATA_URL);
+        if (!res.ok) {
+          throw new Error(`Failed to load data (${res.status})`);
+        }
+        const json = await res.json();
+        if (!cancelled) {
+          setData(Array.isArray(json) ? json : []);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setData([]);
+          setDataError(err instanceof Error ? err.message : "Failed to load data");
+        }
+      }
+    }
+
+    loadData();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const margin = { top: 40, right: 30, bottom: 70, left: 70 };
   const width = Math.max(700, viewport.width - 64);
   const height = Math.max(520, Math.min(820, viewport.height - 260));
@@ -175,9 +76,10 @@ export default function PedestrianDeathsChart() {
   const innerH = height - margin.top - margin.bottom;
 
   const filteredData = useMemo(
-    () => RAW_DATA.filter(d => selectedRegions.has(d[2])),
-    [selectedRegions]
+    () => data.filter(d => selectedRegions.has(d[2])),
+    [data, selectedRegions]
   );
+  const isDataLoading = data.length === 0 && !dataError;
 
   // Scale helpers
   const xMin = 5, xMax = 900;
@@ -302,6 +204,12 @@ export default function PedestrianDeathsChart() {
           </button>
         ))}
       </div>
+
+      {(isDataLoading || dataError) && (
+        <div style={{ marginBottom: 12, fontSize: "12px", color: dataError ? "#ff7b72" : "#8b949e", alignSelf: "center" }}>
+          {dataError ? `Data load error: ${dataError}` : "Loading chart data..."}
+        </div>
+      )}
 
       {/* SVG Chart */}
       <div style={{ position: "relative", background: "#161b22", borderRadius: 12, border: "1px solid #21262d", padding: 8, width: "100%" }}>
