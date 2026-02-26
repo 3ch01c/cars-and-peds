@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Data: [country, iso, region, pedestrian_deaths_per_100k, cars_per_1000_people, population_millions]
 // Sources: WHO Global Status Report on Road Safety 2023 (pedestrian deaths, 2021 data)
@@ -155,10 +155,22 @@ export default function PedestrianDeathsChart() {
   const [tooltip, setTooltip] = useState(null);
   const [scaleX, setScaleX] = useState("log");
   const [scaleY, setScaleY] = useState("linear");
+  const [viewport, setViewport] = useState(() => ({
+    width: typeof window !== "undefined" ? window.innerWidth : 1200,
+    height: typeof window !== "undefined" ? window.innerHeight : 800,
+  }));
+
+  useEffect(() => {
+    function onResize() {
+      setViewport({ width: window.innerWidth, height: window.innerHeight });
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   const margin = { top: 40, right: 30, bottom: 70, left: 70 };
-  const width = 820;
-  const height = 520;
+  const width = Math.max(700, viewport.width - 64);
+  const height = Math.max(520, Math.min(820, viewport.height - 260));
   const innerW = width - margin.left - margin.right;
   const innerH = height - margin.top - margin.bottom;
 
@@ -215,12 +227,12 @@ export default function PedestrianDeathsChart() {
       padding: "24px",
       display: "flex",
       flexDirection: "column",
-      alignItems: "center",
+      alignItems: "stretch",
     }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Space+Grotesk:wght@600;700&display=swap" rel="stylesheet" />
 
       {/* Header */}
-      <div style={{ textAlign: "center", marginBottom: "20px", maxWidth: 860 }}>
+      <div style={{ textAlign: "center", marginBottom: "20px", maxWidth: 860, alignSelf: "center" }}>
         <div style={{ fontSize: "11px", letterSpacing: "3px", color: "#6e7681", marginBottom: 6, textTransform: "uppercase" }}>
           WHO Global Status Report on Road Safety 2023 · World Bank Motor Vehicle Data
         </div>
@@ -270,7 +282,7 @@ export default function PedestrianDeathsChart() {
       </div>
 
       {/* Region filters */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginBottom: 16, maxWidth: 900 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, justifyContent: "center", marginBottom: 16, maxWidth: 900, alignSelf: "center" }}>
         <button onClick={toggleAll} style={{
           padding: "3px 10px", borderRadius: 4, border: "1px solid #444",
           background: "transparent", color: "#8b949e", fontSize: "11px", cursor: "pointer", fontFamily: "inherit"
@@ -292,8 +304,8 @@ export default function PedestrianDeathsChart() {
       </div>
 
       {/* SVG Chart */}
-      <div style={{ position: "relative", background: "#161b22", borderRadius: 12, border: "1px solid #21262d", padding: 8 }}>
-        <svg width={width} height={height} style={{ display: "block", overflow: "visible" }}>
+      <div style={{ position: "relative", background: "#161b22", borderRadius: 12, border: "1px solid #21262d", padding: 8, width: "100%" }}>
+        <svg width={width} height={height} style={{ display: "block", overflow: "visible", width: "100%", height: "auto" }}>
           <defs>
             <clipPath id="chartClip">
               <rect x={0} y={0} width={innerW} height={innerH} />
@@ -418,7 +430,7 @@ export default function PedestrianDeathsChart() {
       </div>
 
       {/* Key insight callouts */}
-      <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap", justifyContent: "center", maxWidth: 860 }}>
+      <div style={{ display: "flex", gap: 12, marginTop: 18, flexWrap: "wrap", justifyContent: "center", maxWidth: 860, alignSelf: "center" }}>
         {[
           { color: "#E0A040", text: "Sub-Saharan Africa has the highest pedestrian death rates (6–16 per 100k) despite very low car ownership." },
           { color: "#4E91E0", text: "Europe shows low pedestrian deaths (0.3–2.3) across a wide range of car ownership levels." },
@@ -436,7 +448,7 @@ export default function PedestrianDeathsChart() {
       </div>
 
       {/* Footer */}
-      <div style={{ marginTop: 16, fontSize: "11px", color: "#444", textAlign: "center" }}>
+      <div style={{ marginTop: 16, fontSize: "11px", color: "#444", textAlign: "center", alignSelf: "center" }}>
         Sources: WHO Global Status Report on Road Safety 2023 · World Bank / OICA Vehicle Registrations ~2021
         <br/>Note: Some pedestrian death figures are WHO estimates. Car ownership data from nearest available year.
       </div>
